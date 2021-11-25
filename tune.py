@@ -15,8 +15,8 @@ from optuna.pruners import HyperbandPruner
 from subprocess import _args_from_interpreter_flags
 import argparse
 
-EPOCH = 100
-DATA_PATH = "/opt/ml/input/data"  # type your data path here that contains test, train and val directories
+EPOCH = 50
+DATA_PATH = "/opt/ml/data"  # type your data path here that contains test, train and val directories
 RESULT_MODEL_PATH = "./result_model.pt" # result model will be saved in this path
 
 
@@ -406,7 +406,7 @@ def objective(trial: optuna.trial.Trial, device) -> Tuple[float, int, float]:
         device=device,
         verbose=1,
         model_path=RESULT_MODEL_PATH,
-        wandb_name='tune'
+        wandb_name='hans'
     )
     trainer.train(train_loader, hyperparams["EPOCHS"], val_dataloader=val_loader)
     loss, f1_score, acc_percent = trainer.test(model, test_dataloader=val_loader)
