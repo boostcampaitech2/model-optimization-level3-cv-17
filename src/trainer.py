@@ -22,7 +22,6 @@ from tqdm import tqdm
 
 from src.utils.torch_utils import save_model
 
-
 def _get_n_data_from_dataloader(dataloader: DataLoader) -> int:
     """Get a number of data in dataloader.
 
@@ -177,7 +176,7 @@ class TorchTrainer:
                 )
             pbar.close()
 
-            _, test_f1, test_acc = self.test(
+            test_loss, test_f1, test_acc = self.test(
                 model=self.model, test_dataloader=val_dataloader
             )
 
@@ -194,12 +193,12 @@ class TorchTrainer:
             best_test_acc = test_acc
             best_test_f1 = test_f1
             print(f"Model saved. Current best test f1: {best_test_f1:.3f}")
-            save_model(
-                model=self.model,
-                path=self.model_path[:-3] + f'{epoch}.pt',
-                data=data,
-                device=self.device,
-            )
+            # save_model(
+            #     model=self.model,
+            #     path=self.model_path + '/result.pt',
+            #     data=data,
+            #     device=self.device,
+            # )
 
         return best_test_acc, best_test_f1
 

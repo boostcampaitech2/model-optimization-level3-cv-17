@@ -2,6 +2,7 @@
 - Author: Junghoon Kim, Jongsun Shin
 - Contact: placidus36@gmail.com, shinn1897@makinarocks.ai
 """
+from numpy import pi
 import optuna
 import torch
 import torch.nn as nn
@@ -14,15 +15,18 @@ from typing import Any, Dict, List, Tuple
 from optuna.pruners import HyperbandPruner
 from subprocess import _args_from_interpreter_flags
 import argparse
+import os
+import yaml
+import pickle
 
 EPOCH = 50
 DATA_PATH = "/opt/ml/data"  # type your data path here that contains test, train and val directories
-RESULT_MODEL_PATH = "./result_model.pt" # result model will be saved in this path
+RESULT_MODEL_PATH = "./result" # result model will be saved in this path
 
 
 def search_hyperparam(trial: optuna.trial.Trial) -> Dict[str, Any]:
     """Search hyperparam from user-specified search space."""
-    epochs = trial.suggest_int("epochs", low=50, high=50, step=50)
+    epochs = trial.suggest_int("epochs", low=EPOCH, high=EPOCH, step=EPOCH)
     img_size = trial.suggest_categorical("img_size", [96, 112, 168, 224])
     n_select = trial.suggest_int("n_select", low=0, high=6, step=2)
     batch_size = trial.suggest_int("batch_size", low=16, high=32, step=16)
@@ -408,9 +412,17 @@ def objective(trial: optuna.trial.Trial, device) -> Tuple[float, int, float]:
         model_path=RESULT_MODEL_PATH,
         wandb_name='hans'
     )
+    print('-'*50)
+    print(trial.number)
+    print('-'*50)
     trainer.train(train_loader, hyperparams["EPOCHS"], val_dataloader=val_loader)
     loss, f1_score, acc_percent = trainer.test(model, test_dataloader=val_loader)
     params_nums = count_model_params(model)
+
+    # with open(os.path.join(RESULT_MODEL_PATH, "data.yml"), "w") as f:
+    #     yaml.dump(data_config, f, default_flow_style=False)
+    # with open(os.path.join(RESULT_MODEL_PATH, "model.yml"), "w") as f:
+    #     yaml.dump(model_config, f, default_flow_style=False)
 
     model_info(model, verbose=True)
     return f1_score, params_nums, mean_time
@@ -447,7 +459,8 @@ def get_best_trial_with_condition(optuna_study: optuna.study.Study) -> Dict[str,
     else:
         print("No trials satisfies minimum condition")
         best_trial_ = None
-
+    df.loc[best_idx,'number']='best'
+    df.to_csv('test.csv')
     return best_trial_
 
 
@@ -468,7 +481,8 @@ def tune(gpu_id, storage: str = None):
         storage=rdb_storage,
         load_if_exists=True,
     )
-    study.optimize(lambda trial: objective(trial, device), n_trials=500)
+    
+    study.optimize(lambda trial: objective(trial, device), n_trials=20)
 
     pruned_trials = [
         t for t in study.trials if t.state == optuna.trial.TrialState.PRUNED
@@ -492,7 +506,13 @@ def tune(gpu_id, storage: str = None):
             print(f"    {key}:{value}")
 
     best_trial = get_best_trial_with_condition(study)
-    print(best_trial)
+    print('*'*50)
+    for key, value in best_trial.params.items():
+        print(f"    {key}:{value}")
+    
+    with open('best.pickle','wb') as fw:
+        pickle.dump(best_trial.params, fw)
+    # print(best_trial.)
 
 
 if __name__ == "__main__":
