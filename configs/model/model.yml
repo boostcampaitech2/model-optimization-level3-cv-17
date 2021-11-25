@@ -1,0 +1,2 @@
+backbone : mobilenetv3_large
+model_path : pretrained/decomposed.pt
