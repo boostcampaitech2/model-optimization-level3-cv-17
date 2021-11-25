@@ -132,7 +132,7 @@ class TorchTrainer:
         num_classes = _get_len_label_from_dataset(train_dataloader.dataset)
         label_list = [i for i in range(num_classes)]
 
-        wandb.init(project="jujoo", entity="jujoo", name=self.wandb_name)
+        wandb.init(project="optimization", entity="hansss", name=self.wandb_name)
 
         for epoch in range(n_epoch):
             running_loss, correct, total = 0.0, 0, 0
