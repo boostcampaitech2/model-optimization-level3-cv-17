@@ -7,6 +7,7 @@
 import os
 import shutil
 import wandb
+import yaml
 from typing import Optional, Tuple, Union
 
 import numpy as np
@@ -89,7 +90,9 @@ class TorchTrainer:
         scaler=None,
         device: torch.device = "cpu",
         verbose: int = 1,
-        wandb_name: str = "default"
+        wandb_name: str = "mobilenetv3_large",
+        tune: bool = False,
+        model_config = None,
     ) -> None:
         """Initialize TorchTrainer class.
 
@@ -110,6 +113,8 @@ class TorchTrainer:
         self.verbose = verbose
         self.device = device
         self.wandb_name = wandb_name
+        self.tune = tune
+        self.model_config = model_config
 
     def train(
         self,
@@ -127,13 +132,16 @@ class TorchTrainer:
         Returns:
             loss and accuracy
         """
+
         best_test_acc = -1.0
         best_test_f1 = -1.0
         num_classes = _get_len_label_from_dataset(train_dataloader.dataset)
         label_list = [i for i in range(num_classes)]
 
-        wandb.init(project="optimization", entity="hansss", name=self.wandb_name)
+        if not self.tune:
+            wandb.init(project="jujoo", entity="jujoo", name=self.wandb_name)
 
+        save_cnt = 0
         for epoch in range(n_epoch):
             running_loss, correct, total = 0.0, 0, 0
             preds, gt = [], []
@@ -180,27 +188,40 @@ class TorchTrainer:
             _, test_f1, test_acc = self.test(
                 model=self.model, test_dataloader=val_dataloader
             )
-
-            wandb.log({
-            "train/loss" : (running_loss / (batch + 1)),
-            "train/acc" : (correct / total) * 100,
-            "train/f1": f1_score(y_true=gt, y_pred=preds, labels=label_list, average='macro', zero_division=0),
-            "test/acc" : test_acc,
-            "test/f1" : test_f1,
-            })
+            if not self.tune:
+                wandb.log({
+                "train/loss" : (running_loss / (batch + 1)),
+                "train/acc" : (correct / total) * 100,
+                "train/f1": f1_score(y_true=gt, y_pred=preds, labels=label_list, average='macro', zero_division=0),
+                "test/acc" : test_acc,
+                "test/f1" : test_f1,
+                })
+            else:
+                wandb.log({
+                f"{self.wandb_name}/train_loss" : (running_loss / (batch + 1)),
+                f"{self.wandb_name}/train_acc" : (correct / total) * 100,
+                f"{self.wandb_name}/train_f1": f1_score(y_true=gt, y_pred=preds, labels=label_list, average='macro', zero_division=0),
+                f"{self.wandb_name}/test_acc" : test_acc,
+                f"{self.wandb_name}/test_f1" : test_f1,
+                })
 
             if best_test_f1 > test_f1:
                 continue
             best_test_acc = test_acc
             best_test_f1 = test_f1
             print(f"Model saved. Current best test f1: {best_test_f1:.3f}")
-            save_model(
-                model=self.model,
-                path=self.model_path[:-3] + f'{epoch}.pt',
-                data=data,
-                device=self.device,
-            )
-
+            if not self.tune:
+                save_model(
+                    model=self.model,
+                    path=self.model_path[:-3] + f'_{self.wandb_name}{save_cnt % 1}.pt',
+                    data=data,
+                    device=self.device,
+                )
+            save_cnt += 1
+        
+        if self.tune:
+            with open(f"{self.wandb_name}.yml", "w") as f:
+                yaml.dump(self.model_config, f, default_flow_style=False)
         return best_test_acc, best_test_f1
 
     @torch.no_grad()

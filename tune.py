@@ -3,6 +3,7 @@
 - Contact: placidus36@gmail.com, shinn1897@makinarocks.ai
 """
 import optuna
+import wandb
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -12,6 +13,7 @@ from src.utils.torch_utils import model_info, check_runtime
 from src.trainer import TorchTrainer, count_model_params
 from typing import Any, Dict, List, Tuple
 from optuna.pruners import HyperbandPruner
+from optuna.integration.wandb import WeightsAndBiasesCallback
 from subprocess import _args_from_interpreter_flags
 import argparse
 
@@ -22,7 +24,7 @@ RESULT_MODEL_PATH = "./result_model.pt" # result model will be saved in this pat
 
 def search_hyperparam(trial: optuna.trial.Trial) -> Dict[str, Any]:
     """Search hyperparam from user-specified search space."""
-    epochs = trial.suggest_int("epochs", low=50, high=50, step=50)
+    epochs = trial.suggest_int("epochs", low=1, high=50, step=50)
     img_size = trial.suggest_categorical("img_size", [96, 112, 168, 224])
     n_select = trial.suggest_int("n_select", low=0, high=6, step=2)
     batch_size = trial.suggest_int("batch_size", low=16, high=32, step=16)
@@ -340,7 +342,7 @@ def search_model(trial: optuna.trial.Trial) -> List[Any]:
     return model, module_info
 
 
-def objective(trial: optuna.trial.Trial, device) -> Tuple[float, int, float]:
+def objective(trial: optuna.trial.Trial, device, num) -> Tuple[float, int, float]:
     """Optuna objective.
     Args:
         trial
@@ -406,7 +408,9 @@ def objective(trial: optuna.trial.Trial, device) -> Tuple[float, int, float]:
         device=device,
         verbose=1,
         model_path=RESULT_MODEL_PATH,
-        wandb_name='hans'
+        wandb_name=f"trial_{num}",
+        tune=True,
+        model_config=model_config["backbone"]
     )
     trainer.train(train_loader, hyperparams["EPOCHS"], val_dataloader=val_loader)
     loss, f1_score, acc_percent = trainer.test(model, test_dataloader=val_loader)
@@ -468,7 +472,8 @@ def tune(gpu_id, storage: str = None):
         storage=rdb_storage,
         load_if_exists=True,
     )
-    study.optimize(lambda trial: objective(trial, device), n_trials=500)
+
+    study.optimize(lambda trial: objective(trial, device, trial.number + 1), n_trials=50, callbacks=[WeightsAndBiasesCallback(wandb_kwargs={"project": "jujoo", "entity": "jujoo"})])
 
     pruned_trials = [
         t for t in study.trials if t.state == optuna.trial.TrialState.PRUNED
@@ -489,11 +494,11 @@ def tune(gpu_id, storage: str = None):
     for tr in best_trials:
         print(f"  value1:{tr.values[0]}, value2:{tr.values[1]}")
         for key, value in tr.params.items():
-            print(f"    {key}:{value}")
+            print(f"{key}:{value}")
 
     best_trial = get_best_trial_with_condition(study)
     print(best_trial)
-
+    
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Optuna tuner.")
