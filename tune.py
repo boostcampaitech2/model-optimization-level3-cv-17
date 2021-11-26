@@ -19,7 +19,8 @@ import os
 import yaml
 import pickle
 
-EPOCH = 50
+EPOCH = 20
+N_TRIALS = 15
 DATA_PATH = "/opt/ml/data"  # type your data path here that contains test, train and val directories
 RESULT_MODEL_PATH = "./result" # result model will be saved in this path
 
@@ -419,10 +420,10 @@ def objective(trial: optuna.trial.Trial, device) -> Tuple[float, int, float]:
     loss, f1_score, acc_percent = trainer.test(model, test_dataloader=val_loader)
     params_nums = count_model_params(model)
 
-    # with open(os.path.join(RESULT_MODEL_PATH, "data.yml"), "w") as f:
-    #     yaml.dump(data_config, f, default_flow_style=False)
-    # with open(os.path.join(RESULT_MODEL_PATH, "model.yml"), "w") as f:
-    #     yaml.dump(model_config, f, default_flow_style=False)
+    with open(os.path.join(RESULT_MODEL_PATH, f"data_{trial.number}.yml"), "w") as f:
+        yaml.dump(data_config, f, default_flow_style=False)
+    with open(os.path.join(RESULT_MODEL_PATH, f"model_{trial.number}.yml"), "w") as f:
+        yaml.dump(model_config, f, default_flow_style=False)
 
     model_info(model, verbose=True)
     return f1_score, params_nums, mean_time
@@ -443,15 +444,15 @@ def get_best_trial_with_condition(optuna_study: optuna.study.Study) -> Dict[str,
         }
     )
     ## minimum condition : accuracy >= threshold
-    threshold = 0.7
-    minimum_cond = df.acc_percent >= threshold
+    threshold = 1000000 # 백만
+    minimum_cond = df.params_nums <= threshold
 
     if minimum_cond.any():
         df_min_cond = df.loc[minimum_cond]
         ## get the best trial idx with lowest parameter numbers
         best_idx = df_min_cond.loc[
-            df_min_cond.params_nums == df_min_cond.params_nums.min()
-        ].acc_percent.idxmax()
+            df_min_cond.acc_percent == df_min_cond.acc_percent.max()
+        ].params_nums.idxmin()
 
         best_trial_ = optuna_study.trials[best_idx]
         print("Best trial which satisfies the condition")
@@ -482,7 +483,7 @@ def tune(gpu_id, storage: str = None):
         load_if_exists=True,
     )
     
-    study.optimize(lambda trial: objective(trial, device), n_trials=20)
+    study.optimize(lambda trial: objective(trial, device), n_trials=N_TRIALS)
 
     pruned_trials = [
         t for t in study.trials if t.state == optuna.trial.TrialState.PRUNED
