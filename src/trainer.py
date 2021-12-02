@@ -193,12 +193,12 @@ class TorchTrainer:
             best_test_acc = test_acc
             best_test_f1 = test_f1
             print(f"Model saved. Current best test f1: {best_test_f1:.3f}")
-            # save_model(
-            #     model=self.model,
-            #     path=self.model_path + '/result.pt',
-            #     data=data,
-            #     device=self.device,
-            # )
+            save_model(
+                model=self.model,
+                path=self.model_path,
+                data=data,
+                device=self.device,
+            )
 
         return best_test_acc, best_test_f1
 

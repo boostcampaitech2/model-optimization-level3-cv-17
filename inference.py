@@ -136,7 +136,7 @@ def inference(model, dataloader, dst_path: str, t0: float) -> None:
     result["time"]["runtime"]["inference_only"] = time_measure_inference
 
     j = json.dumps(result, indent=4)
-    save_path = os.path.join(dst_path, "output.csv")
+    save_path = os.path.join(dst_path, "/opt/ml/code/output.csv")
     with open(save_path, "w") as outfile:
         json.dump(result, outfile)
 
@@ -147,7 +147,7 @@ if __name__ == "__main__":
         "--dst", type=str, help="destination path for submit",
         default=os.environ.get('SM_OUTPUT_DATA_DIR')
     )
-    parser.add_argument("--model_dir", type=str, help="Saved model root directory which includes 'best.pt', 'data.yml', and, 'model.yml'", default='/opt/ml/code/exp/latest')
+    parser.add_argument("--model_dir", type=str, help="Saved model root directory which includes 'best.pt', 'data.yml', and, 'model.yml'", default='/opt/ml/model-optimization-level3-cv-17/exp/latest')
     parser.add_argument("--weight_name", type=str, help="Model weight file name. (best.pt, best.ts, ...)", default="best.pt")
     parser.add_argument(
         "--img_root",

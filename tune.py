@@ -20,7 +20,7 @@ import yaml
 import pickle
 
 EPOCH = 20
-N_TRIALS = 15
+N_TRIALS = 60
 DATA_PATH = "/opt/ml/data"  # type your data path here that contains test, train and val directories
 RESULT_MODEL_PATH = "./result" # result model will be saved in this path
 
