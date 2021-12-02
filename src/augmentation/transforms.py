@@ -153,33 +153,18 @@ def Posterize(img: Image, magnitude: float) -> Image:
     """Posterize the image."""
     magnitude = int(magnitude)
     return PIL.ImageOps.posterize(img, magnitude)
-    
-def Cutout(img, magnitude: float) -> Image:
-        """Cutout some region of the image."""
-        if magnitude == 0.0:
-            return img
-        w, h = img.size
-        xy = get_rand_bbox_coord(w, h, magnitude)
-        img = img.copy()
-        PIL.ImageDraw.Draw(img).rectangle(xy, fill=FILLCOLOR)
-        return img
 
-class cutout:
-    def __init__(self, magnitude: float):
-        self.magnitude = magnitude
 
-    def Cutout(img, magnitude: float) -> Image:
-        """Cutout some region of the image."""
-        if magnitude == 0.0:
-            return img
-        w, h = img.size
-        xy = get_rand_bbox_coord(w, h, magnitude)
-        img = img.copy()
-        PIL.ImageDraw.Draw(img).rectangle(xy, fill=FILLCOLOR)
+def Cutout(img: Image, magnitude: float) -> Image:
+    """Cutout some region of the image."""
+    if magnitude == 0.0:
         return img
-    
-    def __call__(self, img):
-        return self.Cutout(img, self.magnitude)
+    w, h = img.size
+    xy = get_rand_bbox_coord(w, h, magnitude)
+
+    img = img.copy()
+    PIL.ImageDraw.Draw(img).rectangle(xy, fill=FILLCOLOR)
+    return img
 
 
 class SquarePad:

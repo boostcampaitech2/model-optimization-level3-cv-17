@@ -2,7 +2,7 @@ import torch.nn as nn
 import math
 
 
-__all__ = ['mobilenetv3_large', 'mobilenetv3_small']
+__all__ = ['mobilenetv3_large', 'mobilenetv3_small', 'MoGaA']
 
 
 def _make_divisible(v, divisor, min_value=None):
@@ -174,7 +174,6 @@ class MobileNetV3(nn.Module):
                 m.weight.data.normal_(0, 0.01)
                 m.bias.data.zero_()
 
-
 def mobilenetv3_large(**kwargs):
     """
     Constructs a MobileNetV3-Large model
@@ -197,7 +196,7 @@ def mobilenetv3_large(**kwargs):
     #     [5,   6, 160, 1, 1, 1],
     #     [5,   6, 160, 1, 1, 1]
     # ]
-    return MobileNetV3(cfgs, mode='large', **kwargs)
+    return MobileNetV3(cfgs['cfgs'], mode='large', **kwargs)
 
 
 def mobilenetv3_small(**kwargs):

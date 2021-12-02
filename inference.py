@@ -174,7 +174,7 @@ if __name__ == "__main__":
     else:
         model_instance = Model(args.model_config, verbose=True)
         model_instance.model.load_state_dict(
-            torch.load(args.weight, map_location=torch.device("cpu"))
+            torch.load(args.weight, map_location=torch.device("cpu"))['state_dict']
         )
         model = model_instance.model
 
