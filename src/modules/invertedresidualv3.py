@@ -78,6 +78,7 @@ class InvertedResidualv3(nn.Module):
         else:
             return self.conv(x)
 
+
 class SqueezeExcitation(nn.Module):
     def __init__(self, input_channels: int, squeeze_factor: int = 4):
         super().__init__()

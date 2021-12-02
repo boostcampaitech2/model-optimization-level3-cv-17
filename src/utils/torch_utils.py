@@ -59,14 +59,13 @@ def split_dataset_index(
     return train_subset, valid_subset
 
 
-def save_model(model, path, data, device):
+def save_model(model, path, data, device, ckp):
     """save model to torch script, onnx."""
-    try:
-        torch.save(model.state_dict(), f=path)
-        ts_path = os.path.splitext(path)[:-1][0] + ".ts"
-        convert_model_to_torchscript(model, ts_path)
-    except Exception:
-        print("Failed to save torch")
+
+    torch.save(ckp, f=path)
+    ts_path = os.path.splitext(path)[:-1][0] + ".ts"
+    convert_model_to_torchscript(model, ts_path)
+
 
 
 def model_info(model, verbose=False):

@@ -39,6 +39,7 @@ def simple_augment_train(
         ]
     )
 
+
 def simple_augment_test(
     dataset: str = "CIFAR10", img_size: float = 32
 ) -> transforms.Compose:
@@ -54,6 +55,7 @@ def simple_augment_test(
             ),
         ]
     )
+
 
 def randaugment_train(
     dataset: str = "CIFAR10",

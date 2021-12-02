@@ -155,6 +155,7 @@ class TorchTrainer:
                         outputs = self.model(data)
                 else:
                     outputs = self.model(data)
+
                 outputs = torch.squeeze(outputs)
                 loss = self.criterion(outputs, labels)
 
@@ -167,6 +168,7 @@ class TorchTrainer:
                 else:
                     loss.backward()
                     self.optimizer.step()
+                
                 self.scheduler.step()
 
                 _, pred = torch.max(outputs, 1)
@@ -181,7 +183,7 @@ class TorchTrainer:
                     f"Train: [{epoch + 1:03d}] "
                     f"Loss: {(running_loss / (batch + 1)):.3f}, "
                     f"Acc: {(correct / total) * 100:.2f}% "
-                    f"F1(macro): {f1_score(y_true=gt, y_pred=preds, labels=label_list, average='macro', zero_division=0):.2f}"
+                    f"F1(macro): {f1_score(y_true=gt, y_pred=preds, labels=label_list, average='macro', zero_division=0):.3f}"
                 )
             pbar.close()
 
@@ -195,7 +197,7 @@ class TorchTrainer:
                 "train/f1": f1_score(y_true=gt, y_pred=preds, labels=label_list, average='macro', zero_division=0),
                 "test/acc" : test_acc,
                 "test/f1" : test_f1,
-                })
+                }, step=epoch)
             else:
                 wandb.log({
                 f"{self.wandb_name}/train_loss" : (running_loss / (batch + 1)),
@@ -203,26 +205,36 @@ class TorchTrainer:
                 f"{self.wandb_name}/train_f1": f1_score(y_true=gt, y_pred=preds, labels=label_list, average='macro', zero_division=0),
                 f"{self.wandb_name}/test_acc" : test_acc,
                 f"{self.wandb_name}/test_f1" : test_f1,
-                })
+                }, step=epoch)
+
+            print(f"Current Learning Rate: {self.scheduler.get_last_lr()}")
 
             if best_test_f1 > test_f1:
                 continue
             best_test_acc = test_acc
             best_test_f1 = test_f1
-            print(f"Model saved. Current best test f1: {best_test_f1:.3f}")
+            
+            print(f"Model saved. Current best test f1: {best_test_f1:.4f}. save_cnt: {save_cnt}/{save_cnt % 3}")
+            
             if not self.tune:
+                checkpoint = {
+                    'epoch': epoch + 1,
+                    'state_dict': self.model.state_dict(),
+                    'optimizer': self.optimizer.state_dict()
+                }
                 save_model(
                     model=self.model,
-                    path=self.model_path[:-3] + f'_{self.wandb_name}{save_cnt % 1}.pt',
+                    path=self.model_path[:-3] + f'_{save_cnt % 3}.pt',
                     data=data,
                     device=self.device,
+                    ckp=checkpoint,
                 )
             save_cnt += 1
         
         if self.tune:
             with open(f"{self.wandb_name}.yml", "w") as f:
                 yaml.dump(self.model_config, f, default_flow_style=False)
-        return best_test_acc, best_test_f1
+        return best_test_acc, best_test_f1, save_cnt
 
     @torch.no_grad()
     def test(
@@ -251,6 +263,7 @@ class TorchTrainer:
         pbar = tqdm(enumerate(test_dataloader), total=len(test_dataloader))
         model.to(self.device)
         model.eval()
+        model = model.half()
         for batch, (data, labels) in pbar:
             data, labels = data.to(self.device), labels.to(self.device)
 
@@ -272,7 +285,7 @@ class TorchTrainer:
             pbar.set_description(
                 f" Val: {'':5} Loss: {(running_loss / (batch + 1)):.3f}, "
                 f"Acc: {(correct / total) * 100:.2f}% "
-                f"F1(macro): {f1_score(y_true=gt, y_pred=preds, labels=label_list, average='macro', zero_division=0):.2f}"
+                f"F1(macro): {f1_score(y_true=gt, y_pred=preds, labels=label_list, average='macro', zero_division=0):.3f}"
             )
         loss = running_loss / len(test_dataloader)
         accuracy = correct / total

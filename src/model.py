@@ -11,7 +11,25 @@ import torch.nn as nn
 import yaml
 from src.mobilenetv3 import mobilenetv3_large
 from src.modules import ModuleGenerator
+from src.MnasNet import MnasNet
 
+def prune(model, amount=0.3):
+    import torch.nn.utils.prune as prune
+    # Prune model to requested global sparsity
+    print('Pruning model... ', end='')
+    for name, m in model.named_modules():
+        if isinstance(m, nn.Conv2d):
+            prune.l1_unstructured(m, name='weight', amount=amount)  # prune
+            prune.remove(m, 'weight')  # make permanent
+    print(' %.3g global sparsity' % sparsity(model))
+
+def sparsity(model):
+    # Return global model sparsity
+    a, b = 0., 0.
+    for p in model.parameters():
+        a += p.numel()
+        b += (p == 0).sum()
+    return b / a
 
 class Model(nn.Module):
     """Base model class."""
@@ -35,20 +53,25 @@ class Model(nn.Module):
             with open(cfg) as f:
                 self.cfg = yaml.load(f, Loader=yaml.FullLoader)
 
-        if self.cfg['backbone'] == 'mobilenetv3_large':
-            self.model = torch.load(self.cfg['model_path'])
+        if 'pretrain' in self.cfg.keys():
+            self.model = MnasNet(n_class=6, input_size=192, width_mult=1.0)
+            # self.model = torch.load('pretrained/decomposed.pt')
+            # self.model.half()
+            prune(self.model)
         else:
             self.model_parser = ModelParser(cfg=cfg, verbose=verbose)
             self.model = self.model_parser.model
+            # self.model.half()
+            prune(self.model)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward."""
-        return self.forward_one(x)
+        return self.forward_one(x.half())
 
     def forward_one(self, x: torch.Tensor) -> torch.Tensor:
         """Forward onetime."""
 
-        return self.model(x)
+        return self.model(x.half())
 
 
 class ModelParser:
