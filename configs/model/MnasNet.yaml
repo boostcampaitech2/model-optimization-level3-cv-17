@@ -1,0 +1,2 @@
+model_path : pretrained/decomposed.pt
+pretrain : True

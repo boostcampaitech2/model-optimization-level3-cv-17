@@ -24,7 +24,7 @@ RESULT_MODEL_PATH = "./result_model.pt" # result model will be saved in this pat
 
 def search_hyperparam(trial: optuna.trial.Trial) -> Dict[str, Any]:
     """Search hyperparam from user-specified search space."""
-    epochs = trial.suggest_int("epochs", low=1, high=50, step=50)
+    epochs = trial.suggest_int("epochs", low=50, high=50, step=50)
     img_size = trial.suggest_categorical("img_size", [96, 112, 168, 224])
     n_select = trial.suggest_int("n_select", low=0, high=6, step=2)
     batch_size = trial.suggest_int("batch_size", low=16, high=32, step=16)
@@ -472,8 +472,9 @@ def tune(gpu_id, storage: str = None):
         storage=rdb_storage,
         load_if_exists=True,
     )
-
-    study.optimize(lambda trial: objective(trial, device, trial.number + 1), n_trials=50, callbacks=[WeightsAndBiasesCallback(wandb_kwargs={"project": "jujoo", "entity": "jujoo"})])
+    
+    WBC = WeightsAndBiasesCallback(wandb_kwargs={"project": "jujoo", "entity": "jujoo"})
+    study.optimize(lambda trial: objective(trial, device, trial.number + 1), n_trials=50, callbacks=[WBC])
 
     pruned_trials = [
         t for t in study.trials if t.state == optuna.trial.TrialState.PRUNED
