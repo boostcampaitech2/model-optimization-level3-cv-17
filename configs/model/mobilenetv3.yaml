@@ -9,7 +9,7 @@ backbone:
         # Conv argument: [out_channel, kernel_size, stride, padding_size]
         # if padding_size is not given or null, the padding_size will be auto adjusted as padding='SAME' in TensorFlow
         [1, Conv, [16, 3, 2, null, 1, "HardSwish"]],
-                                # k t c SE HS s
+        # k t c SE HS s
         [1, InvertedResidualv3, [3, 1, 16, 0, 0, 1]],
         [1, InvertedResidualv3, [3, 4, 24, 0, 0, 2]], # 2-P2/4, 24 # stride 1 for cifar, 2 for others
         [1, InvertedResidualv3, [3, 3, 24, 0, 0, 1]],     
